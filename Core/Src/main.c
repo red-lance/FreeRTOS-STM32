@@ -49,7 +49,7 @@ osThreadId_t Task1Handle;
 const osThreadAttr_t Task1_attributes = {
   .name = "Task1",
   .stack_size = 256 * 4,
-  .priority = (osPriority_t) osPriorityNormal2,
+  .priority = (osPriority_t) osPriorityNormal,
 };
 /* Definitions for Task2 */
 osThreadId_t Task2Handle;
@@ -333,17 +333,15 @@ void Task_action(char message)
 void StartTask1(void *argument)
 {
   /* USER CODE BEGIN 5 */
-	osPriority_t priority;
   /* Infinite loop */
   for(;;)
   {
-	  priority = osThreadGetPriority(Task2Handle);
-	  Task_action('1');
-	  osThreadSetPriority(Task2Handle, priority+1); // Returns OS status which shows if the function executed properly or not.
-	  HAL_Delay(1000); /* Using HAL Delay here so that Task1 can run continuously till Task2 reaches equal or more priority.
-	   	   	   	   	   	  If we use osDelay, the scheduler will run Task2 and send Task1 in blocked state before it reaches
-	   	   	   	   	   	  equal or more priority so it'll be hard to see in the ITM console when Task2 reached equal priority.
-	   	   	   	   	   	  !!NOT GOOD PRACTICE!! */
+	  Task_action('1'); // Task 1 will *yield* its remaining time space post execution to Task 2.
+	  osThreadYield(); /* This functions sends the task from Run state to Ready state and forces the scheduler to switch the context
+	   	   	   	   	   	  using PendSV interrupt to the next task with the same priority in the ready list. If there's no task,
+	   	   	   	   	   	  it will select the same task again, so be careful while using this functions if you have tasks with
+	   	   	   	   	   	  different priorities. */
+	  // OS Delay will put the task in blocked state and is more safe compared to this.
   }
   /* USER CODE END 5 */
 }
@@ -358,13 +356,11 @@ void StartTask1(void *argument)
 void StartTask2(void *argument)
 {
   /* USER CODE BEGIN StartTask2 */
-	osPriority_t priority;
   /* Infinite loop */
   for(;;)
   {
-	priority = osThreadGetPriority(Task2Handle); // CMSISOS_V2 does not allow the usage of NULL, the function defines that NULL will return -1.
-	Task_action('2');
-	osThreadSetPriority(Task2Handle, priority-2);
+	Task_action('2'); // Task 2 will use its complete time space for execution.
+	// The number 2 gets printed more than 1 because it gets the full time space to execute where Task 1 is going to ready state very fast
   }
   /* USER CODE END StartTask2 */
 }
