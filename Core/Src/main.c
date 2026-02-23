@@ -53,11 +53,9 @@ const osThreadAttr_t Task1_attributes = {
 };
 /* Definitions for Task2 */
 osThreadId_t Task2Handle;
-const osThreadAttr_t Task2_attributes = {
-  .name = "Task2",
-  .stack_size = 256 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
-};
+/*
+Original definition moved to StartTask1();
+*/
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
@@ -136,7 +134,7 @@ int main(void)
   Task1Handle = osThreadNew(StartTask1, NULL, &Task1_attributes);
 
   /* creation of Task2 */
-  Task2Handle = osThreadNew(StartTask2, NULL, &Task2_attributes);
+  // Task2Handle = osThreadNew(StartTask2, NULL, &Task2_attributes); moved to StartTask1();
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -333,15 +331,17 @@ void Task_action(char message)
 void StartTask1(void *argument)
 {
   /* USER CODE BEGIN 5 */
+	const osThreadAttr_t Task2_attributes = {
+	  .name = "Task2",
+	  .stack_size = 256 * 4,
+	  .priority = (osPriority_t) osPriorityNormal,
+	}; // The role of Task1 is to CREATE Task2.
   /* Infinite loop */
   for(;;)
   {
 	  Task_action('1'); // Task 1 will *yield* its remaining time space post execution to Task 2.
-	  osThreadYield(); /* This functions sends the task from Run state to Ready state and forces the scheduler to switch the context
-	   	   	   	   	   	  using PendSV interrupt to the next task with the same priority in the ready list. If there's no task,
-	   	   	   	   	   	  it will select the same task again, so be careful while using this functions if you have tasks with
-	   	   	   	   	   	  different priorities. */
-	  // OS Delay will put the task in blocked state and is more safe compared to this.
+	  Task2Handle = osThreadNew(StartTask2, NULL, &Task2_attributes);
+	  osDelay(1000);
   }
   /* USER CODE END 5 */
 }
@@ -359,8 +359,9 @@ void StartTask2(void *argument)
   /* Infinite loop */
   for(;;)
   {
-	Task_action('2'); // Task 2 will use its complete time space for execution.
-	// The number 2 gets printed more than 1 because it gets the full time space to execute where Task 1 is going to ready state very fast
+	Task_action('2');
+	osThreadTerminate(Task2Handle); // Deletes the task -> You CANNOT mention NULL in CMSISOS_V2 so you have to specify the task.
+	Task_action('x'); // To check if the task is deleted or not.
   }
   /* USER CODE END StartTask2 */
 }
