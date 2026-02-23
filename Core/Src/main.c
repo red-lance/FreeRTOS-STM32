@@ -48,15 +48,15 @@ UART_HandleTypeDef huart2;
 osThreadId_t Task1Handle;
 const osThreadAttr_t Task1_attributes = {
   .name = "Task1",
-  .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
+  .stack_size = 256 * 4,
+  .priority = (osPriority_t) osPriorityNormal2,
 };
 /* Definitions for Task2 */
 osThreadId_t Task2Handle;
 const osThreadAttr_t Task2_attributes = {
   .name = "Task2",
-  .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityLow,
+  .stack_size = 256 * 4,
+  .priority = (osPriority_t) osPriorityNormal,
 };
 /* USER CODE BEGIN PV */
 
@@ -333,11 +333,17 @@ void Task_action(char message)
 void StartTask1(void *argument)
 {
   /* USER CODE BEGIN 5 */
+	osPriority_t priority;
   /* Infinite loop */
   for(;;)
   {
-	Task_action('1');
-    osDelay(1000);
+	  priority = osThreadGetPriority(Task2Handle);
+	  Task_action('1');
+	  osThreadSetPriority(Task2Handle, priority+1); // Returns OS status which shows if the function executed properly or not.
+	  HAL_Delay(1000); /* Using HAL Delay here so that Task1 can run continuously till Task2 reaches equal or more priority.
+	   	   	   	   	   	  If we use osDelay, the scheduler will run Task2 and send Task1 in blocked state before it reaches
+	   	   	   	   	   	  equal or more priority so it'll be hard to see in the ITM console when Task2 reached equal priority.
+	   	   	   	   	   	  !!NOT GOOD PRACTICE!! */
   }
   /* USER CODE END 5 */
 }
@@ -352,11 +358,13 @@ void StartTask1(void *argument)
 void StartTask2(void *argument)
 {
   /* USER CODE BEGIN StartTask2 */
+	osPriority_t priority;
   /* Infinite loop */
   for(;;)
   {
+	priority = osThreadGetPriority(Task2Handle); // CMSISOS_V2 does not allow the usage of NULL, the function defines that NULL will return -1.
 	Task_action('2');
-    osDelay(1000);
+	osThreadSetPriority(Task2Handle, priority-2);
   }
   /* USER CODE END StartTask2 */
 }
