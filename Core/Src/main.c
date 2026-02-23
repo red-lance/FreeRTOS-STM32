@@ -51,6 +51,13 @@ const osThreadAttr_t Task1_attributes = {
   .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
+/* Definitions for Task2 */
+osThreadId_t Task2Handle;
+const osThreadAttr_t Task2_attributes = {
+  .name = "Task2",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityLow,
+};
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
@@ -60,6 +67,7 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
 void StartTask1(void *argument);
+void StartTask2(void *argument);
 
 /* USER CODE BEGIN PFP */
 void Task_action(char message);
@@ -126,6 +134,9 @@ int main(void)
   /* Create the thread(s) */
   /* creation of Task1 */
   Task1Handle = osThreadNew(StartTask1, NULL, &Task1_attributes);
+
+  /* creation of Task2 */
+  Task2Handle = osThreadNew(StartTask2, NULL, &Task2_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -325,11 +336,29 @@ void StartTask1(void *argument)
   /* Infinite loop */
   for(;;)
   {
-	HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);
 	Task_action('1');
-    osDelay(500);
+    osDelay(1000);
   }
   /* USER CODE END 5 */
+}
+
+/* USER CODE BEGIN Header_StartTask2 */
+/**
+* @brief Function implementing the Task2 thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartTask2 */
+void StartTask2(void *argument)
+{
+  /* USER CODE BEGIN StartTask2 */
+  /* Infinite loop */
+  for(;;)
+  {
+	Task_action('2');
+    osDelay(1000);
+  }
+  /* USER CODE END StartTask2 */
 }
 
 /**
