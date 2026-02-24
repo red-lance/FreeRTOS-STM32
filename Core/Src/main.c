@@ -56,14 +56,14 @@ osThreadId_t ReceiverHandle;
 const osThreadAttr_t Receiver_attributes = {
   .name = "Receiver",
   .stack_size = 256 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
+  .priority = (osPriority_t) osPriorityAboveNormal,
 };
 /* Definitions for Sender2 */
 osThreadId_t Sender2Handle;
 const osThreadAttr_t Sender2_attributes = {
   .name = "Sender2",
   .stack_size = 256 * 4,
-  .priority = (osPriority_t) osPriorityLow,
+  .priority = (osPriority_t) osPriorityNormal,
 };
 /* Definitions for Queue1 */
 osMessageQueueId_t Queue1Handle;
@@ -364,27 +364,6 @@ void StartSender1(void *argument)
   /* USER CODE END 5 */
 }
 
-/* USER CODE BEGIN Header_StartSender2 */
-/**
-* @brief Function implementing the Sender2 thread.
-* @param argument: Not used
-* @retval None
-*/
-/* USER CODE END Header_StartSender2 */
-void StartSender2(void *argument)
-{
-  /* USER CODE BEGIN StartSender2 */
-	uint8_t x = 2;
-  /* Infinite loop */
-  for(;;)
-  {
-	  Task_action('S');
-	  osMessageQueuePut(Queue1Handle, &x, 0, 200);
-	  osDelay(2000);
-  }
-  /* USER CODE END StartSender2 */
-}
-
 /* USER CODE BEGIN Header_StartReceiver */
 /**
 * @brief Function implementing the Receiver thread.
@@ -406,6 +385,27 @@ void StartReceiver(void *argument)
 	osDelay(2000);
   }
   /* USER CODE END StartReceiver */
+}
+
+/* USER CODE BEGIN Header_StartSender2 */
+/**
+* @brief Function implementing the Sender2 thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartSender2 */
+void StartSender2(void *argument)
+{
+  /* USER CODE BEGIN StartSender2 */
+	uint8_t x = 2;
+  /* Infinite loop */
+  for(;;)
+  {
+	  Task_action('S');
+	  osMessageQueuePut(Queue1Handle, &x, 0, 200);
+	  osDelay(2000);
+  }
+  /* USER CODE END StartSender2 */
 }
 
 /**
