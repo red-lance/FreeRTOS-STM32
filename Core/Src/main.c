@@ -58,6 +58,13 @@ const osThreadAttr_t Receiver_attributes = {
   .stack_size = 256 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
+/* Definitions for Sender2 */
+osThreadId_t Sender2Handle;
+const osThreadAttr_t Sender2_attributes = {
+  .name = "Sender2",
+  .stack_size = 256 * 4,
+  .priority = (osPriority_t) osPriorityLow,
+};
 /* Definitions for Queue1 */
 osMessageQueueId_t Queue1Handle;
 const osMessageQueueAttr_t Queue1_attributes = {
@@ -73,6 +80,7 @@ static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
 void StartSender1(void *argument);
 void StartReceiver(void *argument);
+void StartSender2(void *argument);
 
 /* USER CODE BEGIN PFP */
 void Task_action(char message);
@@ -146,6 +154,9 @@ int main(void)
 
   /* creation of Receiver */
   ReceiverHandle = osThreadNew(StartReceiver, NULL, &Receiver_attributes);
+
+  /* creation of Sender2 */
+  Sender2Handle = osThreadNew(StartSender2, NULL, &Sender2_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -342,16 +353,36 @@ void Task_action(char message)
 void StartSender1(void *argument)
 {
   /* USER CODE BEGIN 5 */
-	uint8_t x = 0;
+	uint8_t x = 1;
+  /* Infinite loop */
+  for(;;)
+  {
+	  Task_action('s');
+	  osMessageQueuePut(Queue1Handle, &x, 0, 200);
+	  osDelay(2000);
+  }
+  /* USER CODE END 5 */
+}
+
+/* USER CODE BEGIN Header_StartSender2 */
+/**
+* @brief Function implementing the Sender2 thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartSender2 */
+void StartSender2(void *argument)
+{
+  /* USER CODE BEGIN StartSender2 */
+	uint8_t x = 2;
   /* Infinite loop */
   for(;;)
   {
 	  Task_action('S');
 	  osMessageQueuePut(Queue1Handle, &x, 0, 200);
-	  if(++x>9) x = 0;
-	  osDelay(1000);
+	  osDelay(2000);
   }
-  /* USER CODE END 5 */
+  /* USER CODE END StartSender2 */
 }
 
 /* USER CODE BEGIN Header_StartReceiver */
@@ -369,11 +400,10 @@ void StartReceiver(void *argument)
   for(;;)
   {
 	Task_action('R');
-	r_state = osMessageQueueGet(Queue1Handle, &res, NULL, 200);
-	/* 200 ms as a timeout is too short for the queue and it goes into osErrorTimeout, but 2 seconds is a good enough time.
-	 * we use the value of r_state as good practice to see which value we can use as a timeout without causing an osErrorTimeout.
-	 * In the case of 200ms, values stored in res are repeated as there are no new values in the queue. */
-	Task_action(res+48);
+	if(osMessageQueueGet(Queue1Handle, &res, NULL, 4000) == osOK){
+		Task_action(res+48);
+	}
+	osDelay(2000);
   }
   /* USER CODE END StartReceiver */
 }
