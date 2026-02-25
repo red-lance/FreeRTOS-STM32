@@ -44,49 +44,35 @@
 
 UART_HandleTypeDef huart2;
 
-/* Definitions for Sender1 */
-osThreadId_t Sender1Handle;
-const osThreadAttr_t Sender1_attributes = {
-  .name = "Sender1",
+/* Definitions for Task1 */
+osThreadId_t Task1Handle;
+const osThreadAttr_t Task1_attributes = {
+  .name = "Task1",
   .stack_size = 256 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
-/* Definitions for Receiver */
-osThreadId_t ReceiverHandle;
-const osThreadAttr_t Receiver_attributes = {
-  .name = "Receiver",
+/* Definitions for Task2 */
+osThreadId_t Task2Handle;
+const osThreadAttr_t Task2_attributes = {
+  .name = "Task2",
   .stack_size = 256 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
-/* Definitions for Sender2 */
-osThreadId_t Sender2Handle;
-const osThreadAttr_t Sender2_attributes = {
-  .name = "Sender2",
-  .stack_size = 256 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
-};
-/* Definitions for Queue1 */
-osMessageQueueId_t Queue1Handle;
-const osMessageQueueAttr_t Queue1_attributes = {
-  .name = "Queue1"
+/* Definitions for myBinarySem01 */
+osSemaphoreId_t myBinarySem01Handle;
+const osSemaphoreAttr_t myBinarySem01_attributes = {
+  .name = "myBinarySem01"
 };
 /* USER CODE BEGIN PV */
-typedef struct {
-	uint16_t value;
-	uint8_t source;
-} Data;
 
-Data data_toSend1 = {'a', 1};
-Data data_toSend2 = {'b', 2};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
-void StartSender1(void *argument);
-void StartReceiver(void *argument);
-void StartSender2(void *argument);
+void StartTask1(void *argument);
+void StartTask2(void *argument);
 
 /* USER CODE BEGIN PFP */
 void Task_action(char message);
@@ -138,6 +124,10 @@ int main(void)
   /* add mutexes, ... */
   /* USER CODE END RTOS_MUTEX */
 
+  /* Create the semaphores(s) */
+  /* creation of myBinarySem01 */
+  myBinarySem01Handle = osSemaphoreNew(1, 1, &myBinarySem01_attributes);
+
   /* USER CODE BEGIN RTOS_SEMAPHORES */
   /* add semaphores, ... */
   /* USER CODE END RTOS_SEMAPHORES */
@@ -146,23 +136,16 @@ int main(void)
   /* start timers, add new ones, ... */
   /* USER CODE END RTOS_TIMERS */
 
-  /* Create the queue(s) */
-  /* creation of Queue1 */
-  Queue1Handle = osMessageQueueNew (8, sizeof(Data), &Queue1_attributes);
-
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
-  /* creation of Sender1 */
-  Sender1Handle = osThreadNew(StartSender1, NULL, &Sender1_attributes);
+  /* creation of Task1 */
+  Task1Handle = osThreadNew(StartTask1, NULL, &Task1_attributes);
 
-  /* creation of Receiver */
-  ReceiverHandle = osThreadNew(StartReceiver, NULL, &Receiver_attributes);
-
-  /* creation of Sender2 */
-  Sender2Handle = osThreadNew(StartSender2, NULL, &Sender2_attributes);
+  /* creation of Task2 */
+  Task2Handle = osThreadNew(StartTask2, NULL, &Task2_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -347,74 +330,49 @@ void Task_action(char message)
 	ITM_SendChar('\n');
 }
 
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
+	Task_action('!');
+	osSemaphoreRelease(myBinarySem01Handle);
+}
 /* USER CODE END 4 */
 
-/* USER CODE BEGIN Header_StartSender1 */
+/* USER CODE BEGIN Header_StartTask1 */
 /**
-  * @brief  Function implementing the Sender1 thread.
+  * @brief  Function implementing the Task1 thread.
   * @param  argument: Not used
   * @retval None
   */
-/* USER CODE END Header_StartSender1 */
-void StartSender1(void *argument)
+/* USER CODE END Header_StartTask1 */
+void StartTask1(void *argument)
 {
   /* USER CODE BEGIN 5 */
   /* Infinite loop */
   for(;;)
   {
-	  Task_action('s');
-	  osMessageQueuePut(Queue1Handle, &data_toSend1, 0, 200);
 	  osDelay(2000);
+	  Task_action('1');
+	  osSemaphoreRelease(myBinarySem01Handle);
   }
   /* USER CODE END 5 */
 }
 
-/* USER CODE BEGIN Header_StartReceiver */
+/* USER CODE BEGIN Header_StartTask2 */
 /**
-* @brief Function implementing the Receiver thread.
+* @brief Function implementing the Task2 thread.
 * @param argument: Not used
 * @retval None
 */
-/* USER CODE END Header_StartReceiver */
-void StartReceiver(void *argument)
+/* USER CODE END Header_StartTask2 */
+void StartTask2(void *argument)
 {
-  /* USER CODE BEGIN StartReceiver */
-	Data retValue;
+  /* USER CODE BEGIN StartTask2 */
   /* Infinite loop */
   for(;;)
   {
-	ITM_SendChar('R');
-	osMessageQueueGet(Queue1Handle, &retValue, NULL, osWaitForever);
-
-	if(retValue.source == 1){
-		HAL_GPIO_WritePin(LD1_GPIO_Port, LD1_Pin, GPIO_PIN_SET);
-	}
-	else {
-		HAL_GPIO_WritePin(LD3_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
-	}
-	Task_action(retValue.value);
+    osSemaphoreAcquire(myBinarySem01Handle, 4000);
+    Task_action('2');
   }
-  /* USER CODE END StartReceiver */
-}
-
-/* USER CODE BEGIN Header_StartSender2 */
-/**
-* @brief Function implementing the Sender2 thread.
-* @param argument: Not used
-* @retval None
-*/
-/* USER CODE END Header_StartSender2 */
-void StartSender2(void *argument)
-{
-  /* USER CODE BEGIN StartSender2 */
-  /* Infinite loop */
-  for(;;)
-  {
-	  Task_action('S');
-	  osMessageQueuePut(Queue1Handle, &data_toSend2, 0, 200);
-	  osDelay(2000);
-  }
-  /* USER CODE END StartSender2 */
+  /* USER CODE END StartTask2 */
 }
 
 /**
