@@ -56,7 +56,7 @@ osThreadId_t ReceiverHandle;
 const osThreadAttr_t Receiver_attributes = {
   .name = "Receiver",
   .stack_size = 256 * 4,
-  .priority = (osPriority_t) osPriorityAboveNormal,
+  .priority = (osPriority_t) osPriorityNormal,
 };
 /* Definitions for Sender2 */
 osThreadId_t Sender2Handle;
@@ -71,7 +71,13 @@ const osMessageQueueAttr_t Queue1_attributes = {
   .name = "Queue1"
 };
 /* USER CODE BEGIN PV */
-osStatus_t r_state;
+typedef struct {
+	uint16_t value;
+	uint8_t source;
+} Data;
+
+Data data_toSend1 = {'a', 1};
+Data data_toSend2 = {'b', 2};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -142,7 +148,7 @@ int main(void)
 
   /* Create the queue(s) */
   /* creation of Queue1 */
-  Queue1Handle = osMessageQueueNew (8, sizeof(uint8_t), &Queue1_attributes);
+  Queue1Handle = osMessageQueueNew (8, sizeof(Data), &Queue1_attributes);
 
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
@@ -353,12 +359,11 @@ void Task_action(char message)
 void StartSender1(void *argument)
 {
   /* USER CODE BEGIN 5 */
-	uint8_t x = 1;
   /* Infinite loop */
   for(;;)
   {
 	  Task_action('s');
-	  osMessageQueuePut(Queue1Handle, &x, 0, 200);
+	  osMessageQueuePut(Queue1Handle, &data_toSend1, 0, 200);
 	  osDelay(2000);
   }
   /* USER CODE END 5 */
@@ -374,15 +379,20 @@ void StartSender1(void *argument)
 void StartReceiver(void *argument)
 {
   /* USER CODE BEGIN StartReceiver */
-	uint8_t res = 0;
+	Data retValue;
   /* Infinite loop */
   for(;;)
   {
-	Task_action('R');
-	if(osMessageQueueGet(Queue1Handle, &res, NULL, 4000) == osOK){
-		Task_action(res+48);
+	ITM_SendChar('R');
+	osMessageQueueGet(Queue1Handle, &retValue, NULL, osWaitForever);
+
+	if(retValue.source == 1){
+		HAL_GPIO_WritePin(LD1_GPIO_Port, LD1_Pin, GPIO_PIN_SET);
 	}
-	osDelay(2000);
+	else {
+		HAL_GPIO_WritePin(LD3_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
+	}
+	Task_action(retValue.value);
   }
   /* USER CODE END StartReceiver */
 }
@@ -397,12 +407,11 @@ void StartReceiver(void *argument)
 void StartSender2(void *argument)
 {
   /* USER CODE BEGIN StartSender2 */
-	uint8_t x = 2;
   /* Infinite loop */
   for(;;)
   {
 	  Task_action('S');
-	  osMessageQueuePut(Queue1Handle, &x, 0, 200);
+	  osMessageQueuePut(Queue1Handle, &data_toSend2, 0, 200);
 	  osDelay(2000);
   }
   /* USER CODE END StartSender2 */
